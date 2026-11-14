@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# PreToolUse Bash hook: `rtk hook claude`, then rtk-dotnet-test-rewrite over its result, because
+# rtk's own registry has no `dotnet test` rule. Drop both once `rtk rewrite "dotnet test"` answers.
+# Test: rtk-hook.test.sh.
+set -u
+
+payload=$(cat)
+out=$(printf '%s' "$payload" | "${RTK:-rtk}" hook claude)  # RTK: an absolute binary (agentics)
+# The trailing x keeps $(...) from eating the command's own trailing newlines.
+cur=$(jq -j '.hookSpecificOutput.updatedInput.command // .tool_input.command // ""' \
+  <<<"${out:-$payload}"; printf x); cur=${cur%x}
+if new=$(printf '%s' "$cur" | "$(dirname "$0")/rtk-dotnet-test-rewrite" && printf x); then
+  new=${new%x}
+else
+  new=$cur  # a scanner that cannot run must never blank the command
+fi
+
+if [[ "$new" == "$cur" ]]; then
+  printf '%s' "$out"
+elif [[ -n "$out" ]]; then
+  jq -c --arg c "$new" '.hookSpecificOutput.updatedInput.command = $c' <<<"$out"
+else
+  jq -c --arg c "$new" '{hookSpecificOutput: {hookEventName: "PreToolUse",
+    permissionDecisionReason: "RTK auto-rewrite (dotnet test)",
+    updatedInput: (.tool_input + {command: $c})}}' <<<"$payload"
+fi

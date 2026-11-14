@@ -1,0 +1,158 @@
+#!/usr/bin/env python3
+"""Prefix `rtk ` to every `dotnet test` that is a command: stdin command -> stdout command.
+
+rtk's compiled rewrite registry knows `dotnet build` only (0.51.0 and upstream master as of
+2026-10-18), though `rtk dotnet test` exists and keeps MTP exit codes 2 and 8 intact (measured).
+One scanner, shared by ~/.claude/hooks/rtk-hook and ~/.config/opencode/plugins/rtk.ts, so the
+two cannot drift. It walks the shell text instead of matching a regex over it, because the text
+also holds quoted strings, heredoc bodies and comments, which must come out byte for byte.
+Looks through `VAR=value`, `timeout [opts] DURATION`, `time [-p]` and the reserved words that can
+open a command (do, then, {, ! ...); not through sudo, env or xargs, and never inside backticks or
+a double-quoted "$(...)" -- a missed rewrite only costs tokens, a wrong one changes the command.
+Drop it once `rtk rewrite "dotnet test"` answers by itself. Test: rtk-dotnet-test-rewrite.test.sh.
+"""
+import re
+import sys
+
+DOTNET_TEST = re.compile(r"dotnet[ \t]+test(?=[\s;|&)]|$)")
+ASSIGNMENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=")
+TIMEOUT_OPTS_WITH_VALUE = {"-k", "-s", "--kill-after", "--signal"}
+SEPARATORS = ("&&", "||", "$(", ";", "|", "&", "(")
+OPENING_WORDS = {"if", "then", "else", "elif", "while", "until", "do", "{", "!", "time"}
+
+
+def skip_quoted(s: str, i: int) -> int:
+    quote, i = s[i], i + 1
+    while i < len(s) and s[i] != quote:
+        i += 2 if quote == '"' and s[i] == "\\" else 1
+    return i + 1
+
+
+def skip_arithmetic(s: str, i: int) -> int:
+    """End of the $((...)) at i, whose `<<` is a shift, not a heredoc."""
+    depth, i = 0, i + 1
+    while i < len(s):
+        depth += {"(": 1, ")": -1}.get(s[i], 0)
+        i += 1
+        if depth == 0:
+            break
+    return i
+
+
+def skip_blanks(s: str, i: int) -> int:
+    """Past spaces, tabs and line continuations; a bare newline ends the command."""
+    while i < len(s):
+        if s[i] in " \t":
+            i += 1
+        elif s.startswith("\\\n", i):
+            i += 2
+        else:
+            break
+    return i
+
+
+def word_end(s: str, i: int) -> int:
+    """End of the shell word at i; quotes, escapes and $(...) stay inside it."""
+    depth = 0
+    while i < len(s):
+        c = s[i]
+        if c == "\\":
+            i += 2
+        elif c in "'\"":
+            i = skip_quoted(s, i)
+        elif s.startswith("$((", i):
+            i = skip_arithmetic(s, i)
+        elif s.startswith("$(", i):
+            depth, i = depth + 1, i + 2
+        elif c == ")" and depth:
+            depth, i = depth - 1, i + 1
+        elif depth == 0 and (c.isspace() or c in ";|&()<>"):
+            break
+        else:
+            i += 1
+    return i
+
+
+def program_start(s: str, i: int) -> int:
+    """Where the program of the simple command at i begins, past assignments and timeout."""
+    i = skip_blanks(s, i)
+    while True:
+        end = word_end(s, i)
+        word = s[i:end]
+        if ASSIGNMENT.match(word) or word in OPENING_WORDS:
+            i = skip_blanks(s, end)
+            if word == "time" and s.startswith("-p", i):
+                i = skip_blanks(s, word_end(s, i))
+        elif word == "timeout":
+            i = skip_blanks(s, end)
+            while s.startswith("-", i):
+                end = word_end(s, i)
+                option, i = s[i:end], skip_blanks(s, end)
+                if option in TIMEOUT_OPTS_WITH_VALUE:
+                    i = skip_blanks(s, word_end(s, i))
+            i = skip_blanks(s, word_end(s, i))  # the duration
+        else:
+            return i
+
+
+def follows_paren(s: str, i: int) -> bool:
+    j = i - 1
+    while j >= 0 and s[j] in " \t":
+        j -= 1
+    return j >= 0 and s[j] == ")"
+
+
+def skip_heredoc_bodies(s: str, i: int, heredocs: list[tuple[bool, str]]) -> int:
+    for strip_tabs, delimiter in heredocs:
+        while i < len(s):
+            nl = s.find("\n", i)
+            line_end = len(s) if nl < 0 else nl
+            line, i = s[i:line_end], line_end + 1
+            if (line.lstrip("\t") if strip_tabs else line) == delimiter:
+                break
+    return min(i, len(s))
+
+
+def rewrite(s: str) -> str:
+    out, last, i, at_command = [], 0, 0, True
+    heredocs: list[tuple[bool, str]] = []
+    while i < len(s):
+        if at_command:
+            i, at_command = program_start(s, i), False
+            if DOTNET_TEST.match(s, i):
+                out += [s[last:i], "rtk "]
+                last = i
+            continue
+        c = s[i]
+        if c == "\\":
+            i += 2
+        elif c in "'\"":
+            i = skip_quoted(s, i)
+        elif s.startswith("$((", i):
+            i = skip_arithmetic(s, i)
+        elif c == "#" and (i == 0 or s[i - 1].isspace()):
+            nl = s.find("\n", i)
+            i = len(s) if nl < 0 else nl
+        elif s.startswith("<<<", i):
+            i += 3
+        elif s.startswith("<<", i):
+            strip_tabs = s.startswith("<<-", i)
+            start = skip_blanks(s, i + 2 + strip_tabs)
+            i = word_end(s, start)
+            heredocs.append((strip_tabs, re.sub(r"['\"\\]", "", s[start:i])))
+        elif c == "\n":
+            i = skip_heredoc_bodies(s, i + 1, heredocs)
+            heredocs, at_command = [], True
+        elif c == "{" and follows_paren(s, i):
+            i, at_command = i + 1, True  # a function body: name() { ...; }
+        else:
+            sep = next((p for p in SEPARATORS if s.startswith(p, i)), None)
+            i += len(sep) if sep else 1
+            at_command = sep is not None
+    return "".join(out + [s[last:]])
+
+
+if __name__ == "__main__":
+    # surrogateescape: a command that is not valid UTF-8 still comes back byte for byte.
+    text = sys.stdin.buffer.read().decode("utf-8", "surrogateescape")
+    sys.stdout.buffer.write(rewrite(text).encode("utf-8", "surrogateescape"))
