@@ -8,12 +8,14 @@ description: 'Run the agentics multi-agent pipeline against a repository — fix
 Drives the `agentics` kernel: a 1-8 stage pipeline where every gate is evaluated
 by code. Lives at `/mnt/data2/DiskG/MEGA/Code/agentics` (`$AGENTICS` below).
 
+**Dev container or host?** You are in the dev container when `/workspaces` exists and `$REMOTE_CONTAINERS` is `true`. The paragraphs that say "in the dev container" apply there only; on the host, skip them.
+
     /dev-with-agents --bugs "<the defect>"
     /dev-with-agents --feature "<the capability>"
     /dev-with-agents --analyse [optional area]
     /dev-with-agents --features
     /dev-with-agents --worktree --bugs "<the defect>"   # same, on its own branch + checkout
-    /dev-with-agents --done [run_id|mission]            # commit, merge, delete branch (+ worktree)
+    /dev-with-agents --done [run_id|mission]            # commit, merge, delete branch (+ worktree); in the container, ask "Commit? yes/no" first
     /dev-with-agents --done --abandon [run_id|mission]  # drop a worktree run, commit nothing
     /dev-with-agents --check          # validate, spend no tokens
     /dev-with-agents --list           # the shipped workflows
@@ -187,7 +189,16 @@ demo fixture, not the user's code.
 ls <repo>/agentics.yaml
 ```
 
-If it does not exist, create it — the only file that goes in the repository.
+If it does not exist, create it — on the host, the only file that goes in the
+repository. **In the dev container,** the profile never goes in the repository: a repo under
+`/workspaces` gets it from the dotfiles (`agentics/profiles/<repo>.yaml`,
+installed by `agentics-profiles.sh`). When one is missing, say so and propose
+that file instead; a profile made here is never committed, and exists in this
+one clone only, not in the dotfiles that rebuild the next container. It is
+git-excluded only if the repo was in `/workspaces` when `agentics-profiles.sh`
+last ran: for a repo cloned since, run it again first
+(`bash ~/dotfiles/agentics-profiles.sh /workspaces`, idempotent), or the profile
+and what the run writes show up as untracked.
 Copy `$AGENTICS/demo/PythonShop/agentics.yaml` for Python,
 `$AGENTICS/demo/GreetingDemo/agentics.yaml` for C#.
 
@@ -314,6 +325,10 @@ used** — that is reporting, not asking.
 
 ### `--worktree` — the run edits a separate checkout
 
+**Not in the dev container.** The checkout would land in `/workspaces/<repo>.wt/`,
+outside the folder shared with the host, and a rebuild deletes it. Run without
+`--worktree` here, and say so if the user asked for it.
+
 Add `--worktree` to a `--bugs`/`--feature` run (it needs `--mission`). The
 kernel creates branch `agentics/<mission>` checked out in
 `<repo-parent>/<repo>.wt/<mission>/`, cut from the branch the repository is on
@@ -335,12 +350,44 @@ kernel refuses the original profile for it, by name.
 
 ## Finish a run — `--done`
 
+**No commit without the user's yes.** In the dev container, never run
+`agentics done` or `git commit` on your own, not even after `--done`. First
+show the user, for the run:
+
+1. the changed files and `git diff --stat`;
+2. each gate and its PASS/FAIL;
+3. the commit message you would use, in the repo's own format when it has one
+   (gmao-referential and erp-socle: `<type>(<scope>): ERP-<n> <description>`,
+   checked by `.githooks/commit-msg`);
+
+then ask exactly: **"Commit? yes/no"**, and stop. Only an explicit "yes" in
+the user's next message allows the commit. "no", silence or anything else:
+change nothing, commit nothing. Claude Code also asks before both commands
+(`ask` rules written by `claude-ask-rules.sh`): that prompt is the second
+lock, not a reason to skip the question.
+
+In a repo whose commit-msg hook refuses the kernel's message
+(`agentics <run_id>: <mission>`), `agentics done` cannot succeed: after the
+"yes", take the recorded files (the `paths` of
+`$AGENTICS/runs/<run_id>/mutation-ledger.json`) that `git status --porcelain -- <paths>`
+still lists, from the repo root: a path the run created then deleted, or one
+.gitignore excludes, is not the change. `git add` only the new ones (`??`: an
+untracked file is refused by `git commit -- <path>`); a tracked one needs no
+`git add`, and adding it would overwrite what the user staged of it. Then run
+`git commit -m "<agreed message>" -- <those paths>`, never a bare `git commit`, which would sweep in whatever else
+is staged. If that commit fails (the hook refuses the message), `git reset -q --`
+the new files you added, as `agentics done` does, or the next commit sweeps
+them in. `agentics done` for that run then refuses with "its recorded files
+are unchanged, nothing to commit"; that is expected.
+
 ```bash
 $AGENTICS/agentics done [<run_id>|<mission>]   # foreground, sub-second
 ```
 
-All git steps are done by this command. Do not run git yourself, and do not
-call it unless the user asked for `--done` (it commits and merges). It refuses
+All git steps are done by this command. Do not run git yourself (the one
+exception is the `git add` + `git commit` (+ `git reset` on failure) above, for a repo whose hook refuses
+the kernel's message), and do not call it unless the user asked for `--done`
+(in the dev container: answered "yes" as above), as it commits and merges. It refuses
 a run that is not `DONE` or has a gating check not `PASS`, and a merge conflict
 (aborted, branch kept; fix it and call `done` again, it picks up where it
 stopped). A run made WITHOUT `--worktree` is only committed (its recorded

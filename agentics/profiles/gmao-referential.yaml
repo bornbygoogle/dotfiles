@@ -1,0 +1,31 @@
+# agentics profile for ece-madagascar/gmao-referential, used in its dev container only.
+# agentics-profiles.sh copies it to the repo root once and hides it from git (.git/info/exclude).
+# Paths are the container's: the repo is /workspaces/gmao-referential, agentics and the secondbrain are in $HOME.
+name: gmao-referential
+project:
+  root: .
+  source_globs:
+    - "src/**/*.cs"
+  exclude:
+    - "**/bin/**"
+    - "**/obj/**"
+    - "**/Migrations/**"
+tests:
+  # The whole suite, as the repo's AGENTS.md asks before a change is done (architecture tests included).
+  authoritative: "dotnet test"
+  # Quick check without Gmao.Assets.IntegrationTests: it starts PostgreSQL through Testcontainers. One command,
+  # because the kernel runs it as argv and refuses `&&`. Exit code 8 = "zero tests ran", which the filter makes
+  # true for the integration project. Measured 2026-11-14 in the container: 157 tests instead of 163, exit 0.
+  fast: "dotnet test --solution Gmao.slnx --filter-not-namespace \"Gmao.Assets.IntegrationTests*\" --ignore-exit-code 8"
+  # mtp, not xunit: global.json runs the tests on Microsoft.Testing.Platform, whose summary the xunit parser cannot read.
+  parser: mtp
+security:
+  - auth
+  - token
+  - secret
+  - password
+  - permission
+  - personal data
+knowledge_base: /home/vscode/secondbrain
+# Outside the repo: the reports are mine, not the team's.
+reports: /home/vscode/agentics-reports/gmao-referential
