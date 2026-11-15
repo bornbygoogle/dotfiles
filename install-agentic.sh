@@ -44,10 +44,12 @@ jq '(.hooks.PreToolUse[].hooks[] | select(.command == "rtk hook claude") | .comm
   "$settings" > "$settings.tmp"
 mv "$settings.tmp" "$settings"
 
-echo "== 3/10 no commit without my yes (Claude Code ask rules)"
+echo "== 3/10 no commit without my yes (ask rules), then auto mode and allow rules"
 # Early on purpose: the private repos further down stop every automatic build, and a container without
 # these rules has no commit lock at all.
 bash "$HERE/claude-ask-rules.sh"
+# Auto mode and allow rules for everyday commands. After the ask rules on purpose: ask beats allow.
+bash "$HERE/claude-container-settings.sh" /workspaces
 
 echo "== 4/10 bun (claude-mem runs on it)"
 if ! command -v bun > /dev/null; then
