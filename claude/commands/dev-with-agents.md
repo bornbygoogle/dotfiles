@@ -92,6 +92,20 @@ list the files in `~/.claude/card-providers/` and stop. In the dev container, sa
 container only. When its connector is missing, say what its Connector part says and stop. Never write to the
 tracker: no comment, field, state or time log.
 
+0. **An existing brief comes first.** `<id>` is the card given, normalised by the provider file's Id part (`196`
+   becomes `ERP-196`), and every brief file is named after the card given, never after its parent. Look in
+   `<reports>/briefs/` as step 3 defines `<reports>`, the no-profile folder included: the profile's folder first
+   when both hold one. When `<id>.decision.md` exists, read nothing else yet: ask exactly
+   **"Brief found (<date>). reuse / redo?"**, where `<date>` is the file's last change as `YYYY-MM-DD HH:MM`, and
+   wait.
+   On reuse, read only the card itself and its comments, and say what changed since the brief (a newer update, a
+   new comment), that the parent was not re-read, and which parts of step 3 the brief lacks when an older command
+   wrote it. When `<id>.reference.md` also exists, say a "go" was already given: another "go" starts a second run
+   of the same mission. Then go straight to step 4, which shows the brief.
+   On redo, rename the old brief `<id>.decision.<stamp>.md` and an old `<id>.reference.md`
+   `<id>.reference.<stamp>.md`, so its recorded answers are kept. One `<stamp>` for both: the brief's last change
+   as `YYYY-MM-DD-HHMM` (no space nor colon); never overwrite a kept copy, add `-2`, `-3`... to the stamp instead.
+   Then go on with step 1. With no brief, go on with step 1.
 1. **Read the card** as the provider file's Fetch part says: the card, all its comments, its parent and the
    parent's comments, the linked cards, the attachments as links.
 2. **Analyse the code** the card names (classes, files, migrations, tests), with codebase-memory-mcp first,

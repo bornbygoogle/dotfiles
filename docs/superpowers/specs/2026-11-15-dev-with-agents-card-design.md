@@ -79,6 +79,10 @@ A provider file answers, for its tracker:
 
 ### Steps, whatever the provider
 
+0. **An existing brief comes first** (added 2026-11-15): `<reports>/briefs/<id>.decision.md` for the card given,
+   never its parent, is offered with "Brief found (<date>). reuse / redo?". Reuse re-reads only the card and its
+   comments, says what changed, and goes straight to the go / answers stop. Redo keeps the old brief and its
+   reference file under a `YYYY-MM-DD-HHMM` stamp, never overwriting a kept copy.
 1. **Read the card** through the provider file.
 2. **Analyse the code**, before anything is written: the session reads the code the card names (classes,
    files, migrations, tests), with codebase-memory-mcp first, in the current repo and in any other repo of
