@@ -132,7 +132,10 @@ Mockups and attachments are links only: the agents cannot open them, and the dec
 
 - `render-command.sh` already renders `dev-with-agents.md`; step 9 of `install-agentic.sh` also copies the
   shortcut commands (`claude/commands/dev-with-agents-*.md`) and `claude/card-providers/*.md`.
-- For each provider file, the install checks `claude mcp list` for its connector; a missing one prints the
+- Which providers get installed: the names given to `install-card-providers.sh`, else `$CARD_PROVIDERS`, else
+  `card-providers.conf` in the dotfiles (the container build has no terminal; the file survives a rebuild).
+  `--choose` shows a numbered menu. A provider no longer chosen loses its provider file and shortcut.
+- For each chosen provider, the install checks `claude mcp list` for its connector; a missing one prints the
   provider's add command and login, and does not fail the install.
 
 ### Tests

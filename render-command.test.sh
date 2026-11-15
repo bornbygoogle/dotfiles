@@ -35,6 +35,7 @@ has() { grep -q -- "$1" <<< "$card"; }
 check "the usage block shows the card flags" grep -q -- '^    /dev-with-agents --card-provider <provider> --card <id>' "$out"
 check "the card section exists in the container copy" test -n "$card"
 check "one card flag alone is refused with the usage line" has 'Both flags or neither'
+check "a missing provider says how to install it" has 'card-providers.conf'
 check "an unknown provider lists the providers and stops" has 'list the files in `~/.claude/card-providers/`'
 check "the card flow stops on the exact question" has '\*\*"Run? go / answers"\*\*'
 check "only go starts the run" has 'Only an explicit "go"'

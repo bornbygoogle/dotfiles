@@ -86,7 +86,9 @@ run; the `--worktree` section says where it applies.
 
 **The provider file** `~/.claude/card-providers/<provider>.md` says how to read a card in that tracker: its
 Connector, Id, Fetch and Mapping parts. This section never names a tracker. When the file does not exist,
-list the files in `~/.claude/card-providers/` and stop. When its connector is missing, say what its Connector part
+list the files in `~/.claude/card-providers/` and stop; in the dev container, a provider is installed by adding
+it to `card-providers.conf` in the dotfiles (or `bash ~/dotfiles/install-card-providers.sh ~/dotfiles --choose`).
+When its connector is missing, say what its Connector part
 says and stop. Never write to the tracker: no comment, field, state or time log.
 
 1. **Read the card** as the provider file's Fetch part says: the card, all its comments, its parent and the

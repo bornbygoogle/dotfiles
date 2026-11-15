@@ -110,7 +110,6 @@ AGENTICS_DIR="$AGENTICS_DIR" bash "$HERE/agentics-profiles.sh" /workspaces
 jq -e '.permissions.ask | index("Bash(*git commit*)")' "$HOME/.claude/settings.json" > /dev/null
 jq -e '.env.DISABLE_TELEMETRY == "1"' "$HOME/.claude/settings.json" > /dev/null
 test -f "$HOME/.claude/skills/modern-web-guidance/SKILL.md"
-test -f "$HOME/.claude/card-providers/youtrack.md"
 claude --version
 rtk --version
 echo "dotnet test" | "$HOME/.claude/hooks/rtk-dotnet-test-rewrite" | grep -q "^rtk dotnet test"
