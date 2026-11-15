@@ -67,7 +67,8 @@ echo "== 6/10 modern-web-guidance skill, and telemetry off for good"
 # .bashrc for my interactive bash terminals (the container's default shell). A non-interactive `bash -c` or a
 # VS Code task reads neither: set it there by hand if one runs npx.
 # Leading newline: a .bashrc whose last line has none would swallow the export.
-grep -qxF 'export DISABLE_TELEMETRY=1' "$HOME/.bashrc" 2> /dev/null || printf '\nexport DISABLE_TELEMETRY=1\n' >> "$HOME/.bashrc"
+grep -qxF 'export DISABLE_TELEMETRY=1' "$HOME/.bashrc" 2> /dev/null \
+  || printf '\nexport DISABLE_TELEMETRY=1\n' >> "$HOME/.bashrc"
 jq '.env.DISABLE_TELEMETRY = "1"' "$settings" > "$settings.tmp"
 mv "$settings.tmp" "$settings"
 # Without a terminal, `install` alone stops on two questions (which agent, proceed?) and installs nothing
@@ -110,6 +111,7 @@ AGENTICS_DIR="$AGENTICS_DIR" bash "$HERE/agentics-profiles.sh" /workspaces
 jq -e '.permissions.ask | index("Bash(*git commit*)")' "$HOME/.claude/settings.json" > /dev/null
 jq -e '.env.DISABLE_TELEMETRY == "1"' "$HOME/.claude/settings.json" > /dev/null
 test -f "$HOME/.claude/skills/modern-web-guidance/SKILL.md"
+bash "$HERE/install-card-providers.sh" "$HERE" --check  # the chosen card providers are installed
 claude --version
 rtk --version
 echo "dotnet test" | "$HOME/.claude/hooks/rtk-dotnet-test-rewrite" | grep -q "^rtk dotnet test"

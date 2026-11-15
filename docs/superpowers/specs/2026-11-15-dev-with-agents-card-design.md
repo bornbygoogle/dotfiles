@@ -48,10 +48,11 @@ the main command may assume YouTrack.
 
 ### Commands
 
-| Command | What it is |
-|---|---|
-| `/dev-with-agents --card-provider <p> --card <id>` | The full form, in the existing command. Both flags or neither: one alone is refused with the usage line. |
-| `/dev-with-agents-youtrack <n or id>` | A shortcut command: `196` becomes `--card-provider youtrack --card ERP-196`; a full id (`ABC-12`) is kept as is. The default project key `ERP` lives in the provider file. |
+- `/dev-with-agents --card-provider <p> --card <id>`: the full form, in the existing command. Both flags or
+  neither: one alone is refused with the usage line.
+- `/dev-with-agents-youtrack <n or id>`: a shortcut command. `196` becomes
+  `--card-provider youtrack --card ERP-196`; a full id (`ABC-12`) is kept as is. The default project key `ERP`
+  lives in the provider file.
 
 A future provider adds `/dev-with-agents-<provider>`, the same three lines.
 
@@ -84,7 +85,8 @@ A provider file answers, for its tracker:
    `/workspaces` the card names. Read only: nothing is built, run or edited at this stage. This is the step that
    found, for ERP-134, that the old codes `gmao-technician` and `gmao-planner` get new meanings.
 3. **Write the decision file** and show it in full.
-4. **Stop: "Run? go / answers".** My answers are written into the decision file (`--answer` reaches no bugfix role); a part or repo I drop moves to out of scope.
+4. **Stop: "Run? go / answers".** My answers are written into the decision file (`--answer` reaches no bugfix role);
+   a part or repo I drop moves to out of scope.
 5. **On "go"**: write the reference file, then
 
    ```
@@ -99,8 +101,8 @@ A provider file answers, for its tracker:
 In `~/agentics-reports/<repo>/briefs/` (outside the repo, never committed):
 
 1. `<id>.decision.md`, **for me**: plain English, as long as it needs, written so I can decide in one read.
-2. `<id>.reference.md`, **for the agents**: at most 6000 bytes, passed as the run's description. Written only after my go,
-   from the decision file with my answers in it, so the agents follow the design I approved.
+2. `<id>.reference.md`, **for the agents**: at most 6000 bytes, passed as the run's description. Written only after
+   my go, from the decision file with my answers in it, so the agents follow the design I approved.
 
 **The decision file**, in this order (what I decide first, the support after):
 
@@ -130,11 +132,13 @@ Mockups and attachments are links only: the agents cannot open them, and the dec
 
 ### Install, in the dev container
 
-- `render-command.sh` already renders `dev-with-agents.md`; step 9 of `install-agentic.sh` also copies the
-  shortcut commands (`claude/commands/dev-with-agents-*.md`) and `claude/card-providers/*.md`.
-- Which providers get installed: the names given to `install-card-providers.sh`, else `$CARD_PROVIDERS`, else
-  `card-providers.conf` in the dotfiles (the container build has no terminal; the file survives a rebuild).
-  `--choose` shows a numbered menu. A provider no longer chosen loses its provider file and shortcut.
+- `render-command.sh` already renders `dev-with-agents.md`; step 9 of `install-agentic.sh` also copies, for
+  the chosen providers (below), their shortcut command and their provider file.
+- Which providers get installed: the names given to `install-card-providers.sh`, else `$CARD_PROVIDERS` (blank
+  counts as unset), else `card-providers.conf` in the dotfiles (the container build has no terminal and clones the
+  dotfiles afresh: the conf survives a rebuild once committed and pushed). The install self-check (`--check`) checks
+  that the same choice is installed. `--choose` shows a numbered menu. A provider no longer chosen loses its
+  provider file and shortcut.
 - For each chosen provider, the install checks `claude mcp list` for its connector; a missing one prints the
   provider's add command and login, and does not fail the install.
 
@@ -151,7 +155,8 @@ Mockups and attachments are links only: the agents cannot open them, and the dec
 ## Left to the builder
 
 - The slug: the kernel's rule (ASCII, lowercase kebab-case, at most 60 characters).
-- How to cut the reference file to 6000 bytes (the design and the decisions stay whole; comments and sources go first).
+- How to cut the reference file to 6000 bytes (the design and the decisions stay whole; comments and sources go
+  first).
 
 ## Not verified yet
 

@@ -1,6 +1,11 @@
 # /dev-with-agents from a card: Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **History.** This plan is as executed on 2026-11-15. The installer has changed since (f17228a and after): it
+> installs only the providers chosen in `card-providers.conf` (or by argument, `$CARD_PROVIDERS`, `--choose`),
+> and the install self-check checks those. The spec's Install section is current.
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or
+> superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** `/dev-with-agents --card-provider youtrack --card ERP-196` (short: `/dev-with-agents-youtrack 196`)
 reads the card, analyses the code, shows a decision brief and waits for "go" before any kernel run.
@@ -34,7 +39,8 @@ shortcut. A small installer script copies them into the container. Tests are bas
    Task 1.
 4. The connector missing in the container: the command says how to add it and stops; the install prints the
    hint and still succeeds. Pinned in Tasks 2 and 3.
-5. Running the installer twice, or with no provider files: a second run replaces a stale copy, no error. Pinned in Task 3.
+5. Running the installer twice, or with no provider files: a second run replaces a stale copy, no error. Pinned in
+   Task 3.
 
 ---
 
@@ -51,7 +57,8 @@ shortcut. A small installer script copies them into the container. Tests are bas
   `/dev-with-agents` with `--card-provider <p> --card <id>`.
 
 - [ ] **Step 1: Write the failing checks** in `card-providers.test.sh`:
-  - `every shortcut has its provider`: for each `claude/commands/dev-with-agents-*.md`, `claude/card-providers/<p>.md` exists.
+  - `every shortcut has its provider`: for each `claude/commands/dev-with-agents-*.md`,
+    `claude/card-providers/<p>.md` exists.
   - `every provider has its shortcut`: the reverse.
   - `each provider has the four parts`: `grep -c '^## \(Connector\|Id\|Fetch\|Mapping\)$'` is 4, in that order.
   - `the youtrack provider names its tools`: `get_issue`, `get_issue_comments`, `links: ` present.
@@ -61,11 +68,11 @@ shortcut. A small installer script copies them into the container. Tests are bas
   - `no tracker host name`: no `https://<name>.youtrack.cloud` in any tracked file.
 - [ ] **Step 2: Run** `bash card-providers.test.sh` → FAIL on the missing files.
 - [ ] **Step 3: Write both files.** Provider: Connector (server `youtrack`; when missing, tell the user
-  `claude mcp add --transport http --scope user youtrack <your YouTrack URL>/mcp` then `/mcp` to log in, and
-  stop), Id (`<PROJECT>-<n>`, default `ERP`), Fetch (the spec's list: `get_issue`, all pages of
-  `get_issue_comments`, parent via `parentIssue` + its comments, `search_issues "links: <id>"` summary and state,
-  attachments as links), Mapping (Type field; "Ce qu'on attend" / "Fait quand" / "Hors périmètre"; a comment
-  with "en attente" is a hold). Shortcut: frontmatter `name`, `description` with usage `/dev-with-agents-youtrack <n|id>`.
+  `claude mcp add --transport http --scope user youtrack <your YouTrack URL>/mcp` then `/mcp` to log in, and stop),
+  Id (`<PROJECT>-<n>`, default `ERP`), Fetch (the spec's list: `get_issue`, all pages of `get_issue_comments`,
+  parent via `parentIssue` + its comments, `search_issues "links: <id>"` summary and state, attachments as links),
+  Mapping (Type field; "Ce qu'on attend" / "Fait quand" / "Hors périmètre"; a comment with "en attente" is a hold).
+  Shortcut: frontmatter `name`, `description` with usage `/dev-with-agents-youtrack <n|id>`.
 - [ ] **Step 4: Run** `bash card-providers.test.sh` → all ok.
 
 ### Task 2: The card flow in the main command
@@ -93,9 +100,9 @@ shortcut. A small installer script copies them into the container. Tests are bas
   - `the analysis is read only`: says nothing is built, run or edited before "go".
 - [ ] **Step 2: Run** `bash render-command.test.sh` → the new checks FAIL.
 - [ ] **Step 3: Edit the command.** The section follows the spec's "Steps, whatever the provider" and "The two
-  files". Answers go to the decision file; on "go", write the reference file and run
-  with it as the description (`--feature "$(cat …reference.md)"`; ruling, final review C1), `--mission <id-lowercase>-<slug>`, `--feature` or `--bugs` from the provider's
-  mapping; one run per repo. Add to the non-run invocations: a card flow before "go".
+  files". Answers go to the decision file; on "go", write the reference file and run with it as the description
+  (`--feature "$(cat …reference.md)"`; ruling, final review C1), `--mission <id-lowercase>-<slug>`, `--feature` or
+  `--bugs` from the provider's mapping; one run per repo. Add to the non-run invocations: a card flow before "go".
 - [ ] **Step 4: Run** `bash render-command.test.sh` → all ok; `bash card-providers.test.sh` still ok.
 
 ### Task 3: Install into the dev container

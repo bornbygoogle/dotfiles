@@ -16,7 +16,7 @@ by code. Lives at `/mnt/data2/DiskG/MEGA/Code/agentics` (`$AGENTICS` below).
     /dev-with-agents --analyse [optional area]
     /dev-with-agents --features
     /dev-with-agents --worktree --bugs "<the defect>"   # same, on its own branch + checkout
-    /dev-with-agents --done [run_id|mission]            # commit, merge, delete branch (+ worktree); in the container, ask "Commit? yes/no" first
+    /dev-with-agents --done [run_id|mission]            # commit, merge, delete branch (+ worktree); asks first
     /dev-with-agents --done --abandon [run_id|mission]  # drop a worktree run, commit nothing
     /dev-with-agents --check          # validate, spend no tokens
     /dev-with-agents --list           # the shipped workflows
@@ -86,10 +86,11 @@ run; the `--worktree` section says where it applies.
 
 **The provider file** `~/.claude/card-providers/<provider>.md` says how to read a card in that tracker: its
 Connector, Id, Fetch and Mapping parts. This section never names a tracker. When the file does not exist,
-list the files in `~/.claude/card-providers/` and stop; in the dev container, a provider is installed by adding
-it to `card-providers.conf` in the dotfiles (or `bash ~/dotfiles/install-card-providers.sh ~/dotfiles --choose`).
-When its connector is missing, say what its Connector part
-says and stop. Never write to the tracker: no comment, field, state or time log.
+list the files in `~/.claude/card-providers/` and stop. In the dev container, say how to get it: add its name to
+`card-providers.conf` in the dotfiles repo, commit and push, then in the container pull and re-run
+`bash ~/dotfiles/install-card-providers.sh ~/dotfiles` (or rebuild); `--choose` installs it in the running dev
+container only. When its connector is missing, say what its Connector part says and stop. Never write to the
+tracker: no comment, field, state or time log.
 
 1. **Read the card** as the provider file's Fetch part says: the card, all its comments, its parent and the
    parent's comments, the linked cards, the attachments as links.
@@ -100,9 +101,9 @@ says and stop. Never write to the tracker: no comment, field, state or time log.
    exists.
 3. **Write the decision file** `<reports>/briefs/<id>.decision.md`, where `<reports>` is the profile's `reports`
    folder (outside the repo in the dev container; never commit a brief). A repo with no profile yet: write it to
-   `~/agentics-reports/<repo>/briefs/`, and the missing profile is one of the decisions. It is for the user: plain English,
-   jargon explained, as long as it needs, decisions first. Text quoted from the card stays in its own language.
-   Its parts, in this order:
+   `~/agentics-reports/<repo>/briefs/`, and the missing profile is one of the decisions. It is for the user: plain
+   English, jargon explained, as long as it needs, decisions first. Text quoted from the card stays in its own
+   language. Its parts, in this order:
    1. **In short**: three lines: what the card wants, which repo(s), and the recommendation: *go*, *go on part
       of it*, or *wait* (and for what).
    2. **Decisions for you**: numbered. Each gives the question, the options, what each changes, the
@@ -141,13 +142,13 @@ says and stop. Never write to the tracker: no comment, field, state or time log.
      --feature "$(cat <reports>/briefs/<id>.reference.md)"
    ```
 
-   The mission is the kernel's slug: ASCII, lowercase, words joined by `-`, at most 60 characters (`erp-196-`
-   then the title's first words, accents dropped). This file IS the run's description, the one text every stage reads. `--reference` and `--answer` would reach
-   no role of the bugfix workflow (only pentest roles read them), so the approved design and the user's answers
-   must be in it. `$(cat …)` keeps card text away from the shell: a quote or `$(…)` in a card title is never run.
-   `--bugs` instead of `--feature` when the provider's Mapping says the card is a bug. One run per repo: for a
-   card that spans two repos, run in this one, and the decision file has already put the other repo to the user as
-   a decision. `--done` works as for any run.
+   The mission is the kernel's slug: ASCII, lowercase, words joined by `-`, at most 60 characters (`erp-196-` then the
+   title's first words, accents dropped). This file IS the run's description, the one text every stage reads.
+   `--reference` and `--answer` would reach no role of the bugfix workflow (only pentest roles read them), so the
+   approved design and the user's answers must be in it. `$(cat …)` keeps card text away from the shell: a quote or
+   `$(…)` in a card title is never run. `--bugs` instead of `--feature` when the provider's Mapping says the card is a
+   bug. One run per repo: for a card that spans two repos, run in this one, and the decision file has already put the
+   other repo to the user as a decision. `--done` works as for any run.
 
 ## Running it from Claude Code: use the background
 
@@ -309,22 +310,18 @@ the doc-writer may file a lesson in any domain of the knowledge base that holds 
 `INDEX.md`, so a run on a C# repo can still write to `general/`.
 
 **A knowledge base also needs its tools.** Knowledge is written only through
-`<knowledge_base root>/tools/promote.py` (A141), which imports `tools/lint.py`,
-and the architect's notes come from `tools/search.py` (A143). `check` reports a
-missing `promote.py` as a PROBLEM (A147) and `init` warns about it (A156); both
-print a NOTE for a missing `search.py`, whose absence only means the architect
-gets no notes. The architect also searches the secondbrain (`AGENTICS_KB`, or
-`../secondbrain` next to agentics) after the project's own base, so a project-local base does not
-cut it off from the shared notes (A160); `check` shows it on its `shared kb` line. `init` does not create them; run without `promote.py` and the documentation phase CRASHES with
-`PromoteError: …/tools/promote.py not found`, and the run ends FAILED on
-`G-DOC-PLACEMENT` and `G-DOC-CRITIQUE` even when every run gate passed
-(`run_aaf539a257`, 2026-10-23). For a project-local knowledge base, copy
-`promote.py`, `lint.py` and `search.py` from
-`/mnt/data2/DiskG/MEGA/Code/secondbrain/tools/` (the copies do not follow later
-changes there) and run
-`python3 <root>/tools/lint.py` (0 problems) before the run. If it was missing
-on a run whose run gates all passed, fix it and re-document only:
-`agentics run --document-only <run_id> --placement <domain>` (no `--project`).
+`<knowledge_base root>/tools/promote.py` (A141), which imports `tools/lint.py`, and the architect's notes come from
+`tools/search.py` (A143). `check` reports a missing `promote.py` as a PROBLEM (A147) and `init` warns about it
+(A156); both print a NOTE for a missing `search.py`, whose absence only means the architect gets no notes. The
+architect also searches the secondbrain (`AGENTICS_KB`, or `../secondbrain` next to agentics) after the project's
+own base, so a project-local base does not cut it off from the shared notes (A160); `check` shows it on its
+`shared kb` line. `init` does not create them; run without `promote.py` and the documentation phase CRASHES with
+`PromoteError: …/tools/promote.py not found`, and the run ends FAILED on `G-DOC-PLACEMENT` and `G-DOC-CRITIQUE` even
+when every run gate passed (`run_aaf539a257`, 2026-10-23). For a project-local knowledge base, copy `promote.py`,
+`lint.py` and `search.py` from `/mnt/data2/DiskG/MEGA/Code/secondbrain/tools/` (the copies do not follow later
+changes there) and run `python3 <root>/tools/lint.py` (0 problems) before the run. If it was missing on a run whose
+run gates all passed, fix it and re-document only: `agentics run --document-only <run_id> --placement <domain>` (no
+`--project`).
 
 **`source_globs` anchor the walk.** A glob with a literal first segment
 (`src/**/*.py`) means the kernel only walks `src/`. An unanchored one
