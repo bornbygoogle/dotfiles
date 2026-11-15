@@ -109,7 +109,7 @@ shortcut. A small installer script copies them into the container. Tests are bas
 
 **Files:**
 - Create: `install-card-providers.sh` (usage: `install-card-providers.sh <dotfiles dir>`)
-- Modify: `install-agentic.sh` step 9 (call it after `render-command.sh`); self-check block (provider dir exists)
+- Modify: `install-agentic.sh` step 10 (call it after `render-command.sh`); self-check block (provider dir exists)
 - Test: `card-providers.test.sh`
 
 **Interfaces:**
@@ -126,7 +126,7 @@ shortcut. A small installer script copies them into the container. Tests are bas
   - `install-agentic.sh calls it`: `grep -q install-card-providers.sh install-agentic.sh`.
 - [ ] **Step 2: Run** → FAIL (no script).
 - [ ] **Step 3: Write the script**: copy with `cp`, then for each provider, `grep -q "^<p>:"` on `claude mcp list`
-  output; on miss, print the provider file's Connector hint line. Wire it into step 9 and the self-check.
+  output; on miss, print the provider file's Connector hint line. Wire it into step 10 and the self-check.
 - [ ] **Step 4: Run** all five suites → all ok.
 
 ### Task 4: Live check, then report

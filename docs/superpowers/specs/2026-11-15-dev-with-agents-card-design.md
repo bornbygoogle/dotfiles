@@ -136,7 +136,7 @@ Mockups and attachments are links only: the agents cannot open them, and the dec
 
 ### Install, in the dev container
 
-- `render-command.sh` already renders `dev-with-agents.md`; step 9 of `install-agentic.sh` also copies, for
+- `render-command.sh` already renders `dev-with-agents.md`; step 10 of `install-agentic.sh` also copies, for
   the chosen providers (below), their shortcut command and their provider file.
 - Which providers get installed: the names given to `install-card-providers.sh`, else `$CARD_PROVIDERS` (blank
   counts as unset), else `card-providers.conf` in the dotfiles (the container build has no terminal and clones the
