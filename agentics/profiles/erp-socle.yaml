@@ -6,6 +6,10 @@ project:
   root: .
   source_globs:
     - "src/**/*.cs"
+    # The front end is source too: without it the guard never reverts a front-end change, so no vitest test
+    # can be shown to fail without it (agentics docs/multi-suite-design.md, slice 5).
+    - "front/shell/src/**/*.ts"
+    - "front/shell/src/**/*.tsx"
   exclude:
     - "**/bin/**"
     - "**/obj/**"
@@ -21,6 +25,14 @@ tests:
   fast: "dotnet test --solution Socle.slnx --filter-not-namespace \"Socle.Identity.IntegrationTests\" --filter-not-namespace \"Socle.Identity.IntegrationTests.*\" --ignore-exit-code 8"
   # mtp, not xunit: global.json runs the tests on Microsoft.Testing.Platform, whose summary the xunit parser cannot read.
   parser: mtp
+  # The front end's vitest suite, run by the kernel beside `dotnet test`: a red one fails G-TEST-EXIT, and its tests
+  # can prove acceptance criteria. From the repo root (the kernel runs no `cd`); node_modules is in front/shell.
+  # Measured 2026-11-15 through the kernel's own executor: 280 tests, 19.8 s.
+  extra:
+    - name: front
+      command: "npx --no --prefix front/shell vitest run --root front/shell"
+      parser: jest
+      root: front/shell
 security:
   - auth
   - token
