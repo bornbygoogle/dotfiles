@@ -98,9 +98,10 @@ if ! python3 -c "import yaml, markdown, pytest, xdist" 2> /dev/null; then
   sudo apt-get install -y -qq python3-yaml python3-markdown python3-pytest python3-pytest-xdist
 fi
 
-echo "== 9/10 /dev-with-agents command"
+echo "== 9/10 /dev-with-agents command, its card providers and their shortcuts"
 bash "$HERE/render-command.sh" "$HERE/claude/commands/dev-with-agents.md" \
   "$HOME/.claude/commands/dev-with-agents.md" "$AGENTICS_DIR" "$SECONDBRAIN_DIR"
+bash "$HERE/install-card-providers.sh" "$HERE"
 
 echo "== 10/10 agentics profiles for the repos in /workspaces"
 AGENTICS_DIR="$AGENTICS_DIR" bash "$HERE/agentics-profiles.sh" /workspaces
@@ -109,6 +110,7 @@ AGENTICS_DIR="$AGENTICS_DIR" bash "$HERE/agentics-profiles.sh" /workspaces
 jq -e '.permissions.ask | index("Bash(*git commit*)")' "$HOME/.claude/settings.json" > /dev/null
 jq -e '.env.DISABLE_TELEMETRY == "1"' "$HOME/.claude/settings.json" > /dev/null
 test -f "$HOME/.claude/skills/modern-web-guidance/SKILL.md"
+test -f "$HOME/.claude/card-providers/youtrack.md"
 claude --version
 rtk --version
 echo "dotnet test" | "$HOME/.claude/hooks/rtk-dotnet-test-rewrite" | grep -q "^rtk dotnet test"

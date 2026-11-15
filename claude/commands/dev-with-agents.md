@@ -1,6 +1,6 @@
 ---
 name: 'dev-with-agents'
-description: 'Run the agentics multi-agent pipeline against a repository — fix a bug, add a feature, audit the whole codebase, or inventory every feature the code implements. Every gate is evaluated by code, not asserted by a model. Invoking it ALWAYS means running the kernel — never hand-edit the change instead, however small the diff looks. Usage: /dev-with-agents --bugs "<desc>" | --feature "<desc>" | --analyse [area] | --features | --worktree --bugs "<desc>" | --done [run_id|mission] | --check | --list'
+description: 'Run the agentics multi-agent pipeline against a repository — fix a bug, add a feature, audit the whole codebase, or inventory every feature the code implements. Every gate is evaluated by code, not asserted by a model. Invoking it ALWAYS means running the kernel — never hand-edit the change instead, however small the diff looks. Usage: /dev-with-agents --bugs "<desc>" | --feature "<desc>" | --card-provider <provider> --card <id> | --analyse [area] | --features | --worktree --bugs "<desc>" | --done [run_id|mission] | --check | --list'
 ---
 
 # /dev-with-agents
@@ -12,6 +12,7 @@ by code. Lives at `/mnt/data2/DiskG/MEGA/Code/agentics` (`$AGENTICS` below).
 
     /dev-with-agents --bugs "<the defect>"
     /dev-with-agents --feature "<the capability>"
+    /dev-with-agents --card-provider <provider> --card <id>   # from a ticket: decision brief first, run on "go"
     /dev-with-agents --analyse [optional area]
     /dev-with-agents --features
     /dev-with-agents --worktree --bugs "<the defect>"   # same, on its own branch + checkout
@@ -47,7 +48,7 @@ flag per invocation, and two at once is a refusal, not a guess. Asking is the
 sanctioned response. Hand-editing is not.
 
 The only invocations that do not start a run are the ones named below: `--check`,
-`--list`, `--done`, and a question about a run that already exists.
+`--list`, `--done`, a question about a run that already exists, and a card flow until the user says "go".
 
 ## Parse the arguments
 
@@ -61,6 +62,7 @@ The only invocations that do not start a run are the ones named below: `--check`
 | "what does this code do", "list the features", "feature inventory", "what can this system do" | `--features` |
 | `--check`, `check` | `--check` |
 | `--list`, `list` | `--list` |
+| `--card-provider <provider> --card <id>` | "Start from a card" below |
 | `--worktree` (with `--bugs`/`--feature`) | add `--worktree` to the run |
 | `--done [run_id\|mission]` | `agentics done [run_id\|mission]` (see "Finish a run") |
 | `--done --abandon [run_id\|mission]` | `agentics done --abandon [run_id\|mission]` |
@@ -71,7 +73,79 @@ scope you invent is a scope the kernel did not measure. If the user names an
 area, append it with `--task` rather than narrowing the profile.
 
 One flag per invocation. Two at once is a refusal, not a guess — they are
-separate missions with separate gates.
+separate missions with separate gates. The card pair is the one exception:
+`--card-provider` and `--card` are one choice, made of two flags.
+
+## Start from a card
+
+`--card-provider <provider> --card <id>` starts from a ticket instead of a description, so the run gets the whole
+card and the user validates an analysis and a design before any agent writes code. Both flags or neither: one
+alone is a refusal, with the usage line `/dev-with-agents --card-provider <provider> --card <id>`. The shortcut
+commands `/dev-with-agents-<provider>` land here too. Add `--worktree` to a card as to any `--feature`/`--bugs`
+run; the `--worktree` section says where it applies.
+
+**The provider file** `~/.claude/card-providers/<provider>.md` says how to read a card in that tracker: its
+Connector, Id, Fetch and Mapping parts. This section never names a tracker. When the file does not exist,
+list the files in `~/.claude/card-providers/` and stop. When its connector is missing, say what its Connector part
+says and stop. Never write to the tracker: no comment, field, state or time log.
+
+1. **Read the card** as the provider file's Fetch part says: the card, all its comments, its parent and the
+   parent's comments, the linked cards, the attachments as links.
+2. **Analyse the code** the card names (classes, files, migrations, tests), with codebase-memory-mcp first,
+   in this repo and in any other repo of `/workspaces` (or next to this one, on the host) the card names. Read
+   only: nothing is built, run or edited before "go". This is where traps show up: a code that gets a new
+   meaning, a unique index, a test the new spec makes obsolete, a part the card asks to "add" that already
+   exists.
+3. **Write the decision file** `<reports>/briefs/<id>.decision.md`, where `<reports>` is the profile's `reports`
+   folder (outside the repo in the dev container; never commit a brief). A repo with no profile yet: write it to
+   `~/agentics-reports/<repo>/briefs/`, and the missing profile is one of the decisions. It is for the user: plain English,
+   jargon explained, as long as it needs, decisions first. Text quoted from the card stays in its own language.
+   Its parts, in this order:
+   1. **In short**: three lines: what the card wants, which repo(s), and the recommendation: *go*, *go on part
+      of it*, or *wait* (and for what).
+   2. **Decisions for you**: numbered. Each gives the question, the options, what each changes, the
+      recommendation and why. Every gap is one: a question the card says to ask before coding with no answer
+      in the comments, a second repo or a repo without an agentics profile, a part a comment puts on hold, a
+      choice the code forces that the card does not settle.
+   3. **What the card asks**: what to build, done when, out of scope (verbatim, from the provider's Mapping),
+      each item tagged with its repo; the decisions found in comments (author, date, quote); the parent in two
+      lines.
+   4. **Analysis, the code today**: what exists, with `file:line`; what the change touches; the traps found.
+      Each claim says whether it was read in the code or is an assumption.
+   5. **Proposed design**: the files to create or change; the tests written first, one line each on what it
+      proves; for a migration, its steps in order and whether it can be undone.
+   6. **Risks**: what could go wrong and its impact on data (real or personal data, a migration that cannot be
+      switched off), on security (rights, 403s), on other repos or teams.
+   7. **How "done" is checked**: each done-when item mapped to the test or gate that proves it, and what the
+      run cannot check (a mockup, a PR, a review).
+   8. **Effort**: the card's estimate against what the analysis found.
+   9. **Sources**: the cards, comments and files read, as links.
+
+   Mockups and attachments are links only: the agents cannot open them, and the decision file says so.
+4. Show the decision file in full, then ask exactly: **"Run? go / answers"**, and stop.
+   Only an explicit "go" starts the run. Anything else is an answer: write it into the decision file (under the
+   decision it settles, or "out of scope" for a part or repo the user drops), show what changed, and ask again.
+   "go, but …" is an answer: apply the "but", show it, and ask again.
+5. **On "go"**: write `<reports>/briefs/<id>.reference.md` for the agents, at most 6000 bytes (an accented
+   letter takes 2; the stages' context budgets start at 10 KB, and a longer task pushes out their rules): the card id
+   and title, what to build, the approved design, the decisions with the user's answers, done when, out of
+   scope; cut comments and sources first when it does not fit. Then go through "Before running anything" and run:
+
+   ```bash
+   $AGENTICS/agentics run \
+     --project <repo>/agentics.yaml \
+     --mission <id-lowercase>-<slug-of-the-card-title> \
+     --runtime <claude-code if you are Claude Code, else opencode> \
+     --feature "$(cat <reports>/briefs/<id>.reference.md)"
+   ```
+
+   The mission is the kernel's slug: ASCII, lowercase, words joined by `-`, at most 60 characters (`erp-196-`
+   then the title's first words, accents dropped). This file IS the run's description, the one text every stage reads. `--reference` and `--answer` would reach
+   no role of the bugfix workflow (only pentest roles read them), so the approved design and the user's answers
+   must be in it. `$(cat …)` keeps card text away from the shell: a quote or `$(…)` in a card title is never run.
+   `--bugs` instead of `--feature` when the provider's Mapping says the card is a bug. One run per repo: for a
+   card that spans two repos, run in this one, and the decision file has already put the other repo to the user as
+   a decision. `--done` works as for any run.
 
 ## Running it from Claude Code: use the background
 
@@ -287,7 +361,8 @@ A `MISSING` knowledge base means documentation will be SKIPPED and
 
 **4. Is the tree clean?** The kernel detects a write by a read-only role and
 refuses it, with NO rollback. If `git status` is dirty, say so and offer to
-commit or stash first.
+commit or stash first. A brief under `<reports>/briefs/` is expected after a card
+flow: it is not a reason to commit or stash, and `agentics done` never commits it.
 
 ## Run it
 

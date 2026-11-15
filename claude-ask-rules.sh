@@ -12,11 +12,17 @@ set -euo pipefail
 # `git -C <dir> commit` got through without it. The price, accepted: any git command with " <sub>" later in the
 # line asks too (`git log --grep commit`, `git diff -- amount.cs`). Narrowing it would reopen the -C hole.
 # push: rtk rewrites it too, so the team repos' own `ask: Bash(git push *)` never fires in this container.
+# mcp__youtrack__*: a card flow (/dev-with-agents --card-provider youtrack) reads the tracker only. Its prose says
+# so; these rules make a write ask anyway. The read tools stay free. The list is explicit (an `mcp__youtrack`
+# catch-all would also catch the reads, and ask beats allow): a write tool the server adds later is not in it.
+# Container only, like this whole install. Ask in auto mode was measured for Bash rules, not yet for MCP tools.
 # `agentics* done`: a quoted kernel path (`"$AGENTICS/agentics" done`) has a quote before " done". The same
 # price: a run whose task text holds " done" (`--bugs "order never marked done"`) asks too.
 rules=$(jq -nc '["Bash(*agentics* done*)", "Bash(*gh pr merge*)"]
   + (["commit", "merge", "cherry-pick", "revert", "am", "rebase", "pull", "push"]
-  | map("Bash(*git \(.)*)", "Bash(*git * \(.)*)"))')
+  | map("Bash(*git \(.)*)", "Bash(*git * \(.)*)"))
+  + (["add_issue_comment", "update_issue", "change_issue_assignee", "log_work", "manage_issue_tags", "link_issues",
+      "create_issue", "create_draft_issue", "create_article", "update_article"] | map("mcp__youtrack__\(.)"))')
 settings="$HOME/.claude/settings.json"
 mkdir -p "$(dirname "$settings")"
 [ -f "$settings" ] || echo '{}' > "$settings"

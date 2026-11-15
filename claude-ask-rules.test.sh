@@ -26,6 +26,11 @@ rules=('Bash(*agentics* done*)' 'Bash(*gh pr merge*)')
 for sub in commit merge cherry-pick revert am rebase pull push; do
   rules+=("Bash(*git $sub*)" "Bash(*git * $sub*)")
 done
+# A card flow reads the tracker only: every YouTrack tool that writes asks first, even in auto mode.
+for tool in add_issue_comment update_issue change_issue_assignee log_work manage_issue_tags link_issues \
+  create_issue create_draft_issue create_article update_article; do
+  rules+=("mcp__youtrack__$tool")
+done
 for rule in "${rules[@]}"; do
   check "settings ask before $rule, once" \
     test "$(jq --arg r "$rule" '[.permissions.ask[] | select(. == $r)] | length' "$settings")" = 1
